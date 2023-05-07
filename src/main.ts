@@ -1,4 +1,8 @@
 
+import { Renderer } from './canvas';
+import './main.scss';
+
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('😇');
+  const renderer = new Renderer(document.body);
+  console.log('😇', renderer);
 }, false);

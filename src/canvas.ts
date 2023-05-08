@@ -66,6 +66,81 @@ export class Renderer {
   }
 
   generateCell(data: ImageData): ImageData {
+    const w = data.width;
+    const h = data.height;
+    const out = new ImageData(w, h);
 
+    // TODO: セルに分割していく部分のロジックを考える
+
+    return out;
+  }
+}
+
+class Cell {
+  data: ImageData;
+  rect: DOMRect;
+  count: number;
+  diff: number;
+  color: {r: number, g: number, b: number};
+
+  constructor(data, x, y, w, h) {
+    this.data = data;
+    this.rect = new DOMRect(x, y, w, h);
+    this.count = w * h;
+    this.diff = 0;
+
+    this.calculate();
+  }
+  calculate(): number {
+    const imageData = this.data;
+    const width = imageData.width;
+    // general
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    // vector
+    const vr = [];
+    const vg = [];
+    const vb = [];
+    // cache
+    for (let i = 0, j = this.rect.height; i < j; ++i) {
+      const x = (this.rect.y + i) * width + this.rect.x;
+      for (let k = 0, l = this.rect.width; k < l; ++k) {
+        const index = (x + k) * 4;
+        r += imageData.data[index];
+        g += imageData.data[index + 1];
+        b += imageData.data[index + 2];
+        vr.push(imageData.data[index]);
+        vg.push(imageData.data[index + 1]);
+        vb.push(imageData.data[index + 2]);
+      }
+    }
+    // average
+    const ar = r / this.count;
+    const ag = g / this.count;
+    const ab = b / this.count;
+    // total
+    let tr = 0;
+    let tg = 0;
+    let tb = 0;
+    for (let i = 0, j = vr.length; i < j; ++i) {
+      r = vr[i] - ar;
+      g = vg[i] - ag;
+      b = vb[i] - ab;
+      tr += r * r;
+      tg += g * g;
+      tb += b * b;
+    }
+    // color
+    this.color.r = Math.round(tr / this.count);
+    this.color.g = Math.round(tg / this.count);
+    this.color.b = Math.round(tb / this.count);
+    // ntsc
+    tr = this.color.r * 0.2989;
+    tg = this.color.g * 0.587;
+    tb = this.color.b * 0.114;
+    // final result
+    this.diff = tr + tg + tb;
+    return this.diff;
   }
 }

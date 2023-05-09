@@ -1,14 +1,15 @@
 
 export class Renderer {
+  iteration: number;
   parent: HTMLElement;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   image: HTMLImageElement;
 
-  static get MINIMUM_CELL_WIDTH(): number {return 8;}
-  static get EXPONENT(): number {return 4;}
+  static get MINIMUM_CELL_WIDTH(): number {return 4;}
 
   constructor(parent: HTMLElement) {
+    this.iteration = 0;
     this.parent = parent;
     this.canvas = document.createElement('canvas');
     this.context = this.canvas.getContext('2d');
@@ -42,6 +43,7 @@ export class Renderer {
   }
 
   render(): void {
+    this.iteration = 0;
     const c = this.canvas;
     const cx = this.context;
     c.width = this.image.naturalWidth;
@@ -49,13 +51,18 @@ export class Renderer {
     cx.clearRect(0, 0, c.width, c.height);
     const smallData = this.generateSmallCanvas();
     const cellData = this.generateCell(smallData);
+
+    // TODO: とりま結果確認用
+    this.context.putImageData(cellData, 0, 0);
   }
 
   generateSmallCanvas(): ImageData {
     const width = this.canvas.width - this.canvas.width % Renderer.MINIMUM_CELL_WIDTH;
     const height = this.canvas.height - this.canvas.height % Renderer.MINIMUM_CELL_WIDTH;
-    const dw = width / Renderer.MINIMUM_CELL_WIDTH;
-    const dh = height / Renderer.MINIMUM_CELL_WIDTH;
+    const tw = width / Renderer.MINIMUM_CELL_WIDTH;
+    const th = height / Renderer.MINIMUM_CELL_WIDTH;
+    const dw = tw - tw % Renderer.MINIMUM_CELL_WIDTH;
+    const dh = th - th % Renderer.MINIMUM_CELL_WIDTH;
     const c = document.createElement('canvas');
     const cx = c.getContext('2d');
     c.width = dw;
@@ -68,11 +75,53 @@ export class Renderer {
   generateCell(data: ImageData): ImageData {
     const w = data.width;
     const h = data.height;
-    const out = new ImageData(w, h);
+    // gen canvas and reset
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const cx = c.getContext('2d');
+    cx.fillStyle = 'black';
+    cx.fillRect(0, 0, w, h);
 
-    // TODO: セルに分割していく部分のロジックを考える
+    // まず最初は全体が対象（偏差を求めないようにするため最終引数を指定）
+    let target = new Cell(data, 0, 0, w, h, 0);
+    let cache = target.split() as Cell[];
+    // split した瞬間に色を更新
+    cache.forEach((cell) => {
+      cx.fillStyle = `rgb(${cell.color.r}, ${cell.color.g}, ${cell.color.b})`;
+      cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+    });
 
-    return out;
+    // TODO: たぶんループする回数は固定値にしたほうがよい
+    let running = true;
+    window.addEventListener('keydown', (evt) => {
+      running = false;
+    }, {once: true});
+    while (running) {
+      // 偏差が最大なセルのインデックス
+      const max = Cell.imax(cache);
+      // 標準偏差が最大なので次の分割対象
+      target = cache[max];
+      // 分割対象となったセルは取り除く
+      cache.splice(max, 1);
+      // 分割（分割不可能な場合は false が返る）
+      const cells = target.split();
+      if (cells === false) {
+        // このセルはこれ以上分割できない
+        ++this.iteration;
+        if (this.iteration > 1000) {
+          running = false;
+        }
+      } else {
+        // まさに分割した直後の色を塗りキャッシュする
+        cells.forEach((cell) => {
+          cx.fillStyle = `rgb(${cell.color.r}, ${cell.color.g}, ${cell.color.b})`;
+          cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+        });
+        cache.push(cells[0], cells[1], cells[2], cells[3]);
+      }
+    }
+    return cx.getImageData(0, 0, w, h);
   }
 }
 
@@ -83,13 +132,52 @@ class Cell {
   diff: number;
   color: {r: number, g: number, b: number};
 
-  constructor(data, x, y, w, h) {
+  static imin(cells: Cell[]): number {
+    let index = 0;
+    let value = Infinity;
+    for (let i = 0, j = cells.length; i < j; ++i) {
+      if (cells[i].diff < value) {
+        value = cells[i].diff;
+        index = i;
+      }
+    }
+    return index;
+  }
+  static imax(cells: Cell[]): number {
+    let index = 0;
+    let value = -Infinity;
+    for (let i = 0, j = cells.length; i < j; ++i) {
+      if (cells[i].diff > value) {
+        value = cells[i].diff;
+        index = i;
+      }
+    }
+    return index;
+  }
+
+  constructor(data: ImageData, x: number, y: number, w: number, h: number, diff?: number) {
     this.data = data;
     this.rect = new DOMRect(x, y, w, h);
     this.count = w * h;
-    this.diff = 0;
+    this.diff = diff ?? 0;
+    this.color = {r: 0, g: 0, b: 0};
 
-    this.calculate();
+    if (diff == null) {
+      this.calculate();
+    }
+  }
+  split(): Cell[] | false {
+    const w = this.rect.width / 2;
+    const h = this.rect.height / 2;
+    if (w <= 1 || h <= 1) {
+      return false;
+    }
+    const cells = [];
+    cells.push(new Cell(this.data, this.rect.x, this.rect.y, w, h));         // 左上
+    cells.push(new Cell(this.data, this.rect.x + w, this.rect.y, w, h));     // 右上
+    cells.push(new Cell(this.data, this.rect.x, this.rect.y + h, w, h));     // 左下
+    cells.push(new Cell(this.data, this.rect.x + w, this.rect.y + h, w, h)); // 右下
+    return cells;
   }
   calculate(): number {
     const imageData = this.data;
@@ -132,9 +220,9 @@ class Cell {
       tb += b * b;
     }
     // color
-    this.color.r = Math.round(tr / this.count);
-    this.color.g = Math.round(tg / this.count);
-    this.color.b = Math.round(tb / this.count);
+    this.color.r = ar;
+    this.color.g = ag;
+    this.color.b = ab;
     // ntsc
     tr = this.color.r * 0.2989;
     tg = this.color.g * 0.587;

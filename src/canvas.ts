@@ -144,11 +144,20 @@ class Cell {
     return index;
   }
   static imax(cells: Cell[]): number {
+    let average = 0;
+    for (let i = 0, j = cells.length; i < j; ++i) {
+      average += cells[i].diff;
+    }
+    average /= cells.length;
+    const diffs = cells.map((cell) => {
+      const d = cell.diff - average;
+      return d * d * (cell.rect.width * cell.rect.height * 0.2);
+    });
     let index = 0;
     let value = -Infinity;
     for (let i = 0, j = cells.length; i < j; ++i) {
-      if (cells[i].diff > value) {
-        value = cells[i].diff;
+      if (diffs[i] > value) {
+        value = diffs[i];
         index = i;
       }
     }
@@ -167,16 +176,18 @@ class Cell {
     }
   }
   split(): Cell[] | false {
-    const w = this.rect.width / 2;
-    const h = this.rect.height / 2;
+    const mw = this.rect.width % 2;
+    const mh = this.rect.height % 2;
+    const w = (this.rect.width - mw) / 2;
+    const h = (this.rect.height - mh) / 2;
     if (w <= 1 || h <= 1) {
       return false;
     }
     const cells = [];
-    cells.push(new Cell(this.data, this.rect.x, this.rect.y, w, h));         // 左上
-    cells.push(new Cell(this.data, this.rect.x + w, this.rect.y, w, h));     // 右上
-    cells.push(new Cell(this.data, this.rect.x, this.rect.y + h, w, h));     // 左下
-    cells.push(new Cell(this.data, this.rect.x + w, this.rect.y + h, w, h)); // 右下
+    cells.push(new Cell(this.data, this.rect.x, this.rect.y, w, h));                   // 左上
+    cells.push(new Cell(this.data, this.rect.x + w, this.rect.y, w + mw, h));          // 右上
+    cells.push(new Cell(this.data, this.rect.x, this.rect.y + h, w, h + mh));          // 左下
+    cells.push(new Cell(this.data, this.rect.x + w, this.rect.y + h, w + mw, h + mh)); // 右下
     return cells;
   }
   calculate(): number {

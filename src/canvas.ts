@@ -1,12 +1,19 @@
 
+// セルのサイズが大きいほど影響力が強くなるように補正する係数
+const SIZE_RATIO = 0.5;
+// 分割できないセルが何度出てきたら処理を完了したとみなすか
+const MAX_LIMIT_COUNT = 10;
+// 元のピクセルを何個単位で最小ピクセルとみなして縮小 canvas に焼くか
+const MINIMUM_CELL_WIDTH = 4;
+// これ以上分割できないサイズ（1 以上を指定）
+const MINIMUM_SPLIT_WIDTH = 2;
+
 export class Renderer {
   iteration: number;
   parent: HTMLElement;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   image: HTMLImageElement;
-
-  static get MINIMUM_CELL_WIDTH(): number {return 4;}
 
   constructor(parent: HTMLElement) {
     this.iteration = 0;
@@ -53,16 +60,18 @@ export class Renderer {
     const cellData = this.generateCell(smallData);
 
     // TODO: とりま結果確認用
+    this.canvas.width = smallData.width;
+    this.canvas.height = smallData.height;
     this.context.putImageData(cellData, 0, 0);
   }
 
   generateSmallCanvas(): ImageData {
-    const width = this.canvas.width - this.canvas.width % Renderer.MINIMUM_CELL_WIDTH;
-    const height = this.canvas.height - this.canvas.height % Renderer.MINIMUM_CELL_WIDTH;
-    const tw = width / Renderer.MINIMUM_CELL_WIDTH;
-    const th = height / Renderer.MINIMUM_CELL_WIDTH;
-    const dw = tw - tw % Renderer.MINIMUM_CELL_WIDTH;
-    const dh = th - th % Renderer.MINIMUM_CELL_WIDTH;
+    const width = this.canvas.width - this.canvas.width % MINIMUM_CELL_WIDTH;
+    const height = this.canvas.height - this.canvas.height % MINIMUM_CELL_WIDTH;
+    const tw = width / MINIMUM_CELL_WIDTH;
+    const th = height / MINIMUM_CELL_WIDTH;
+    const dw = tw - tw % MINIMUM_CELL_WIDTH;
+    const dh = th - th % MINIMUM_CELL_WIDTH;
     const c = document.createElement('canvas');
     const cx = c.getContext('2d');
     c.width = dw;
@@ -109,7 +118,7 @@ export class Renderer {
       if (cells === false) {
         // このセルはこれ以上分割できない
         ++this.iteration;
-        if (this.iteration > 1000) {
+        if (this.iteration > MAX_LIMIT_COUNT) {
           running = false;
         }
       } else {
@@ -151,7 +160,7 @@ class Cell {
     average /= cells.length;
     const diffs = cells.map((cell) => {
       const d = cell.diff - average;
-      return d * d * (cell.rect.width * cell.rect.height * 0.2);
+      return d * d * (cell.rect.width * cell.rect.height * SIZE_RATIO);
     });
     let index = 0;
     let value = -Infinity;
@@ -180,7 +189,7 @@ class Cell {
     const mh = this.rect.height % 2;
     const w = (this.rect.width - mw) / 2;
     const h = (this.rect.height - mh) / 2;
-    if (w <= 1 || h <= 1) {
+    if (w <= MINIMUM_SPLIT_WIDTH || h <= MINIMUM_SPLIT_WIDTH) {
       return false;
     }
     const cells = [];

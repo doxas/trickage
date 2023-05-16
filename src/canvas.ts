@@ -21,6 +21,8 @@ export class Renderer {
   lineLuminanceScale = 0.2;
   // モノクロ（NTSC）
   monochrome = false;
+  // random
+  randomness = false;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
@@ -70,6 +72,7 @@ export class Renderer {
   }
 
   render(): void {
+    if (this.image == null) {return;}
     this.iteration = 0;
     const c = this.canvas;
     const cx = this.context;
@@ -152,8 +155,12 @@ export class Renderer {
         case Renderer.MODE_CELL_SPLIT:
         case Renderer.MODE_CELL_SPLIT_WITH_LINE:
         default:
-          // 偏差が最大となるセルのインデックス
-          index = Cell.imax(cache, this.sizeRatio);
+          if (this.randomness === true) {
+            index = Math.floor(cache.length * Math.random());
+          } else {
+            // 偏差が最大となるセルのインデックス
+            index = Cell.imax(cache, this.sizeRatio);
+          }
       }
       // 取り出したインデックスが標準偏差最大なので次の分割対象となる
       target = cache[index];

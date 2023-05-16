@@ -10,6 +10,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const pane = new Pane();
 
+  const btn = pane.addButton({
+    title: 're-render',
+  });
+  btn.on('click', () => {
+    renderer.render();
+  });
   const list = pane.addBlade({
     view: 'list',
     label: 'mode',
@@ -24,6 +30,9 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   pane.addInput({monochrome: renderer.monochrome}, 'monochrome').on('change', (v) => {
     renderer.monochrome = v.value === true;
+  });
+  pane.addInput({randomness: renderer.randomness}, 'randomness').on('change', (v) => {
+    renderer.randomness = v.value === true;
   });
   pane.addInput({sizeRatio: renderer.sizeRatio}, 'sizeRatio', {
     step: 1,

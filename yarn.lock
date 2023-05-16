@@ -52,6 +52,11 @@
   resolved "https://registry.yarnpkg.com/@leichtgewicht/ip-codec/-/ip-codec-2.0.4.tgz#b2ac626d6cb9c8718ab459166d4bb405b8ffa78b"
   integrity sha512-Hcv+nVC0kZnQ3tD9GVu5xSMR4VVYOteQIr/hwFPVEvPdlXqgGEuRjiheChHgdM+JyqdgNcmzZOX/tnl0JOiI7A==
 
+"@tweakpane/core@^1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@tweakpane/core/-/core-1.1.8.tgz#3d23a857bee9b2ca2b79a3a89f5a38454b523662"
+  integrity sha512-psvBf6Cbm3YSZOTmDFWkcGzHYMnw7gVZM3jw+TfbzErIC+sMXPQb85h4ayW04w2u7AGg8jD0gHXSCg5wd+rafg==
+
 "@types/body-parser@*":
   version "1.19.2"
   resolved "https://registry.yarnpkg.com/@types/body-parser/-/body-parser-1.19.2.tgz#aea2059e28b7658639081347ac4fab3de166e6f0"
@@ -2066,6 +2071,11 @@ ts-loader@^9.2.6:
     enhanced-resolve "^5.0.0"
     micromatch "^4.0.0"
     semver "^7.3.4"
+
+tweakpane@^3.1.9:
+  version "3.1.9"
+  resolved "https://registry.yarnpkg.com/tweakpane/-/tweakpane-3.1.9.tgz#e01f183dda3f34764170cbbc79351fabcdebcc45"
+  integrity sha512-vMzh3X8uHo9HDY+9S9V0bc+UBScs8VYmMeOEW+BvynczV0aiLHweYv4eKpyoqpcRrQlkLhUsx8Dvv/1/qiCESg==
 
 type-is@~1.6.18:
   version "1.6.18"

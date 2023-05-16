@@ -12,6 +12,7 @@
   "keywords": [],
   "author": "doxas",
   "devDependencies": {
+    "@tweakpane/core": "^1.1.8",
     "@types/three": "^0.149.0",
     "css-loader": "^6.7.3",
     "eventemitter3": "^5.0.0",
@@ -25,5 +26,8 @@
     "webpack": "^5.57.1",
     "webpack-cli": "^5.0.1",
     "webpack-dev-server": "^4.3.1"
+  },
+  "dependencies": {
+    "tweakpane": "^3.1.9"
   }
 }

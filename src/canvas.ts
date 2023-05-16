@@ -1,22 +1,22 @@
 
-// セルのサイズが大きいほど影響力が強くなるように補正する係数
-const SIZE_RATIO = 1.0;
-// 分割できないセルが何度出てきたら処理を完了したとみなすか
-const MAX_LIMIT_COUNT = 1000;
-// 元のピクセルを何個単位で最小ピクセルとみなして縮小 canvas に焼くか
-const MINIMUM_CELL_WIDTH = 1;
-// これ以上分割できないサイズ（1 以上を指定）
-const MINIMUM_SPLIT_WIDTH = 4;
-// 最終的な出力の輝度に掛ける係数
-const LUMINANCE_SCALE = 0.25;
-
 export class Renderer {
-  iteration: number;
-  _mode: number;
-  parent: HTMLElement;
-  canvas: HTMLCanvasElement;
-  context: CanvasRenderingContext2D;
-  image: HTMLImageElement;
+  private iteration: number;
+  private _mode: number;
+  private parent: HTMLElement;
+  private canvas: HTMLCanvasElement;
+  private context: CanvasRenderingContext2D;
+  private image: HTMLImageElement;
+
+  // セルのサイズが大きいほど影響力が強くなるように補正する係数
+  sizeRatio = 1.0;
+  // 分割できないセルが何度出てきたら処理を完了したとみなすか
+  maxLimitCount = 1000;
+  // 元のピクセルを何個単位で最小ピクセルとみなして縮小 canvas に焼くか
+  originalScale = 1;
+  // これ以上分割できないサイズ（1 以上を指定）
+  minimumSplitWidth = 4;
+  // 最終的な出力の線の輝度に掛ける係数
+  lineLuminanceScale = 0.25;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
@@ -25,7 +25,7 @@ export class Renderer {
     return this._mode;
   }
   set mode (value: number) {
-    if (value >= 0 && value <= Renderer.MODE_CELL_SPLIT) {
+    if (value >= 0 && value <= Renderer.MODE_CELL_SPLIT_WITH_LINE) {
       this._mode = value;
     }
   }
@@ -88,12 +88,12 @@ export class Renderer {
   }
 
   generateSmallCanvas(): ImageData {
-    const width = this.canvas.width - this.canvas.width % MINIMUM_CELL_WIDTH;
-    const height = this.canvas.height - this.canvas.height % MINIMUM_CELL_WIDTH;
-    const tw = width / MINIMUM_CELL_WIDTH;
-    const th = height / MINIMUM_CELL_WIDTH;
-    const dw = tw - tw % MINIMUM_CELL_WIDTH;
-    const dh = th - th % MINIMUM_CELL_WIDTH;
+    const width = this.canvas.width - this.canvas.width % this.originalScale;
+    const height = this.canvas.height - this.canvas.height % this.originalScale;
+    const tw = width / this.originalScale;
+    const th = height / this.originalScale;
+    const dw = tw - tw % this.originalScale;
+    const dh = th - th % this.originalScale;
     const c = document.createElement('canvas');
     const cx = c.getContext('2d');
     c.width = dw;
@@ -120,14 +120,14 @@ export class Renderer {
       cx.fillStyle = `rgb(${cell.color.r}, ${cell.color.g}, ${cell.color.b})`;
       cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
       if (this._mode === Renderer.MODE_CELL_SPLIT_WITH_LINE) {
-        cx.strokeStyle = `rgb(${cell.color.r * LUMINANCE_SCALE}, ${cell.color.g * LUMINANCE_SCALE}, ${cell.color.b * LUMINANCE_SCALE})`;
+        cx.strokeStyle = `rgb(${cell.color.r * this.lineLuminanceScale}, ${cell.color.g * this.lineLuminanceScale}, ${cell.color.b * this.lineLuminanceScale})`;
         cx.strokeRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
       }
     };
 
     // まず最初は全体が対象（偏差を求めないようにするため最終引数を指定）
     let target = new Cell(data, 0, 0, w, h, 0);
-    let cache = target.split() as Cell[];
+    let cache = target.split(this.minimumSplitWidth) as Cell[];
     // split した場所に色が塗られる
     cache.forEach((cell) => {
       drawRect(cx, cell);
@@ -139,17 +139,17 @@ export class Renderer {
     }, {once: true});
     while (running === true) {
       // 偏差が最大となるセルのインデックス
-      const max = Cell.imax(cache);
+      const max = Cell.imax(cache, this.sizeRatio);
       // 取り出したインデックスが標準偏差最大なので次の分割対象となる
       target = cache[max];
       // 分割対象となったセルはキャッシュから取り除く
       cache.splice(max, 1);
       // 分割（分割不可能な場合は false が返る）
-      const cells = target.split();
+      const cells = target.split(this.minimumSplitWidth);
       if (cells === false) {
         // このセルはこれ以上分割できない
         ++this.iteration;
-        if (this.iteration > MAX_LIMIT_COUNT) {
+        if (this.iteration > this.maxLimitCount) {
           running = false;
         }
       } else {
@@ -182,7 +182,7 @@ class Cell {
     }
     return index;
   }
-  static imax(cells: Cell[]): number {
+  static imax(cells: Cell[], sizeRatio = 1.0): number {
     let average = 0;
     for (let i = 0, j = cells.length; i < j; ++i) {
       average += cells[i].diff;
@@ -190,7 +190,7 @@ class Cell {
     average /= cells.length;
     const diffs = cells.map((cell) => {
       const d = cell.diff - average;
-      return d * d * (cell.rect.width * cell.rect.height * SIZE_RATIO);
+      return d * d * (cell.rect.width * cell.rect.height * sizeRatio);
     });
     let index = 0;
     let value = -Infinity;
@@ -214,12 +214,12 @@ class Cell {
       this.calculate();
     }
   }
-  split(): Cell[] | false {
+  split(minimum = 2): Cell[] | false {
     const mw = this.rect.width % 2;
     const mh = this.rect.height % 2;
     const w = (this.rect.width - mw) / 2;
     const h = (this.rect.height - mh) / 2;
-    if (w <= MINIMUM_SPLIT_WIDTH || h <= MINIMUM_SPLIT_WIDTH) {
+    if (w <= minimum || h <= minimum) {
       return false;
     }
     const cells = [];

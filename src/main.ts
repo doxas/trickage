@@ -34,6 +34,9 @@ window.addEventListener('DOMContentLoaded', () => {
   pane.addInput({randomness: renderer.randomness}, 'randomness').on('change', (v) => {
     renderer.randomness = v.value === true;
   });
+  pane.addInput({swapStroke: renderer.swapStroke}, 'swapStroke').on('change', (v) => {
+    renderer.swapStroke = v.value === true;
+  });
   pane.addInput({sizeRatio: renderer.sizeRatio}, 'sizeRatio', {
     step: 1,
     min: 1,

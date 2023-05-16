@@ -23,6 +23,8 @@ export class Renderer {
   monochrome = false;
   // random
   randomness = false;
+  // swap fill and stroke
+  swapStroke = false;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
@@ -130,11 +132,16 @@ export class Renderer {
       } else {
         cx.fillStyle = `rgb(${cell.color.r * this.luminanceScale}, ${cell.color.g * this.luminanceScale}, ${cell.color.b * this.luminanceScale})`;
       }
-      cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+      cx.strokeStyle = `rgb(${cell.color.r * this.lineLuminanceScale}, ${cell.color.g * this.lineLuminanceScale}, ${cell.color.b * this.lineLuminanceScale})`;
+      if (this.swapStroke === true) {
+        const fill = cx.fillStyle;
+        cx.fillStyle = cx.strokeStyle;
+        cx.strokeStyle = fill;
+      }
       if (this._mode === Renderer.MODE_CELL_SPLIT_WITH_LINE) {
-        cx.strokeStyle = `rgb(${cell.color.r * this.lineLuminanceScale}, ${cell.color.g * this.lineLuminanceScale}, ${cell.color.b * this.lineLuminanceScale})`;
         cx.strokeRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
       }
+      cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
     };
 
     // まず最初は全体が対象（偏差を求めないようにするため最終引数を指定）

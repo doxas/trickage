@@ -1,21 +1,37 @@
 
 // セルのサイズが大きいほど影響力が強くなるように補正する係数
-const SIZE_RATIO = 0.5;
+const SIZE_RATIO = 1.0;
 // 分割できないセルが何度出てきたら処理を完了したとみなすか
-const MAX_LIMIT_COUNT = 10;
+const MAX_LIMIT_COUNT = 1000;
 // 元のピクセルを何個単位で最小ピクセルとみなして縮小 canvas に焼くか
-const MINIMUM_CELL_WIDTH = 4;
+const MINIMUM_CELL_WIDTH = 1;
 // これ以上分割できないサイズ（1 以上を指定）
-const MINIMUM_SPLIT_WIDTH = 2;
+const MINIMUM_SPLIT_WIDTH = 4;
+// 最終的な出力の輝度に掛ける係数
+const LUMINANCE_SCALE = 0.25;
 
 export class Renderer {
   iteration: number;
+  _mode: number;
   parent: HTMLElement;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   image: HTMLImageElement;
 
+  static MODE_CELL_SPLIT = 0;
+  static MODE_CELL_SPLIT_WITH_LINE = 1;
+
+  get mode (): number {
+    return this._mode;
+  }
+  set mode (value: number) {
+    if (value >= 0 && value <= Renderer.MODE_CELL_SPLIT) {
+      this._mode = value;
+    }
+  }
+
   constructor(parent: HTMLElement) {
+    this._mode = Renderer.MODE_CELL_SPLIT;
     this.iteration = 0;
     this.parent = parent;
     this.canvas = document.createElement('canvas');
@@ -57,12 +73,18 @@ export class Renderer {
     c.height = this.image.naturalHeight;
     cx.clearRect(0, 0, c.width, c.height);
     const smallData = this.generateSmallCanvas();
-    const cellData = this.generateCell(smallData);
 
-    // TODO: とりま結果確認用
+    let resultData = null;
+    switch (this._mode) {
+      case Renderer.MODE_CELL_SPLIT:
+      case Renderer.MODE_CELL_SPLIT_WITH_LINE:
+      default:
+        resultData = this.generateCell(smallData);
+    }
+
     this.canvas.width = smallData.width;
     this.canvas.height = smallData.height;
-    this.context.putImageData(cellData, 0, 0);
+    this.context.putImageData(resultData, 0, 0);
   }
 
   generateSmallCanvas(): ImageData {
@@ -92,26 +114,35 @@ export class Renderer {
     cx.fillStyle = 'black';
     cx.fillRect(0, 0, w, h);
 
+    cx.lineWidth = 1;
+    cx.strokeStyle = 'rgba(0, 0, 0, 1.0)';
+    const drawRect = (cx: CanvasRenderingContext2D, cell: Cell): void => {
+      cx.fillStyle = `rgb(${cell.color.r}, ${cell.color.g}, ${cell.color.b})`;
+      cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+      if (this._mode === Renderer.MODE_CELL_SPLIT_WITH_LINE) {
+        cx.strokeStyle = `rgb(${cell.color.r * LUMINANCE_SCALE}, ${cell.color.g * LUMINANCE_SCALE}, ${cell.color.b * LUMINANCE_SCALE})`;
+        cx.strokeRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+      }
+    };
+
     // まず最初は全体が対象（偏差を求めないようにするため最終引数を指定）
     let target = new Cell(data, 0, 0, w, h, 0);
     let cache = target.split() as Cell[];
-    // split した瞬間に色を更新
+    // split した場所に色が塗られる
     cache.forEach((cell) => {
-      cx.fillStyle = `rgb(${cell.color.r}, ${cell.color.g}, ${cell.color.b})`;
-      cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+      drawRect(cx, cell);
     });
 
-    // TODO: たぶんループする回数は固定値にしたほうがよい
     let running = true;
     window.addEventListener('keydown', (evt) => {
       running = false;
     }, {once: true});
-    while (running) {
-      // 偏差が最大なセルのインデックス
+    while (running === true) {
+      // 偏差が最大となるセルのインデックス
       const max = Cell.imax(cache);
-      // 標準偏差が最大なので次の分割対象
+      // 取り出したインデックスが標準偏差最大なので次の分割対象となる
       target = cache[max];
-      // 分割対象となったセルは取り除く
+      // 分割対象となったセルはキャッシュから取り除く
       cache.splice(max, 1);
       // 分割（分割不可能な場合は false が返る）
       const cells = target.split();
@@ -122,10 +153,9 @@ export class Renderer {
           running = false;
         }
       } else {
-        // まさに分割した直後の色を塗りキャッシュする
+        // 分割した直後の色を塗り、分割後の小セルをキャッシュする
         cells.forEach((cell) => {
-          cx.fillStyle = `rgb(${cell.color.r}, ${cell.color.g}, ${cell.color.b})`;
-          cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+          drawRect(cx, cell);
         });
         cache.push(cells[0], cells[1], cells[2], cells[3]);
       }

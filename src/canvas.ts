@@ -19,6 +19,8 @@ export class Renderer {
   luminanceScale = 1.1;
   // 最終的な出力の線の輝度に掛ける係数
   lineLuminanceScale = 0.2;
+  // モノクロ（NTSC）
+  monochrome = false;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
@@ -119,7 +121,12 @@ export class Renderer {
     cx.lineWidth = 1;
     cx.strokeStyle = 'rgba(0, 0, 0, 1.0)';
     const drawRect = (cx: CanvasRenderingContext2D, cell: Cell): void => {
-      cx.fillStyle = `rgb(${cell.color.r * this.luminanceScale}, ${cell.color.g * this.luminanceScale}, ${cell.color.b * this.luminanceScale})`;
+      if (this.monochrome === true) {
+        const m = cell.diff * this.luminanceScale;
+        cx.fillStyle = `rgb(${m}, ${m}, ${m})`;
+      } else {
+        cx.fillStyle = `rgb(${cell.color.r * this.luminanceScale}, ${cell.color.g * this.luminanceScale}, ${cell.color.b * this.luminanceScale})`;
+      }
       cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
       if (this._mode === Renderer.MODE_CELL_SPLIT_WITH_LINE) {
         cx.strokeStyle = `rgb(${cell.color.r * this.lineLuminanceScale}, ${cell.color.g * this.lineLuminanceScale}, ${cell.color.b * this.lineLuminanceScale})`;
@@ -140,12 +147,18 @@ export class Renderer {
       running = false;
     }, {once: true});
     while (running === true) {
-      // 偏差が最大となるセルのインデックス
-      const max = Cell.imax(cache, this.sizeRatio);
+      let index = 0;
+      switch (this._mode) {
+        case Renderer.MODE_CELL_SPLIT:
+        case Renderer.MODE_CELL_SPLIT_WITH_LINE:
+        default:
+          // 偏差が最大となるセルのインデックス
+          index = Cell.imax(cache, this.sizeRatio);
+      }
       // 取り出したインデックスが標準偏差最大なので次の分割対象となる
-      target = cache[max];
+      target = cache[index];
       // 分割対象となったセルはキャッシュから取り除く
-      cache.splice(max, 1);
+      cache.splice(index, 1);
       // 分割（分割不可能な場合は false が返る）
       const cells = target.split(this.minimumSplitWidth);
       if (cells === false) {
@@ -173,12 +186,20 @@ class Cell {
   diff: number;
   color: {r: number, g: number, b: number};
 
-  static imin(cells: Cell[]): number {
+  static imin(cells: Cell[], sizeRatio = 1.0): number {
+    let average = 0;
+    for (let i = 0, j = cells.length; i < j; ++i) {
+      average += cells[i].diff;
+    }
+    average /= cells.length;
     let index = 0;
     let value = Infinity;
     for (let i = 0, j = cells.length; i < j; ++i) {
-      if (cells[i].diff < value) {
-        value = cells[i].diff;
+      const c = cells[i];
+      const d = c.diff - average;
+      const r = (d * d) * (c.rect.width * c.rect.height * sizeRatio);
+      if (r < value) {
+        value = r;
         index = i;
       }
     }

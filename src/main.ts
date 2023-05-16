@@ -22,6 +22,9 @@ window.addEventListener('DOMContentLoaded', () => {
   list.on('change', (v) => {
     renderer.mode = v.value;
   });
+  pane.addInput({monochrome: renderer.monochrome}, 'monochrome').on('change', (v) => {
+    renderer.monochrome = v.value === true;
+  });
   pane.addInput({sizeRatio: renderer.sizeRatio}, 'sizeRatio', {
     step: 1,
     min: 1,

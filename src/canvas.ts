@@ -25,6 +25,8 @@ export class Renderer {
   randomness = false;
   // swap fill and stroke
   swapStroke = false;
+  // line width
+  lineWidth = 0;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
@@ -123,8 +125,8 @@ export class Renderer {
     cx.fillStyle = 'black';
     cx.fillRect(0, 0, w, h);
 
-    cx.lineWidth = 1;
-    cx.strokeStyle = 'rgba(0, 0, 0, 1.0)';
+    cx.lineWidth = Math.max(2, this.lineWidth);
+    const sub = this.lineWidth / 2;
     const drawRect = (cx: CanvasRenderingContext2D, cell: Cell): void => {
       if (this.monochrome === true) {
         const m = cell.diff * this.luminanceScale;
@@ -139,18 +141,21 @@ export class Renderer {
         cx.strokeStyle = fill;
       }
       if (this._mode === Renderer.MODE_CELL_SPLIT_WITH_LINE) {
-        cx.strokeRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+        // cx.strokeRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
+        cx.strokeRect(cell.rect.x + sub, cell.rect.y + sub, cell.rect.width - sub, cell.rect.height - sub);
+        cx.fillRect(cell.rect.x + sub, cell.rect.y + sub, cell.rect.width - sub, cell.rect.height - sub);
+      } else {
+        cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
       }
-      cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
     };
 
     // まず最初は全体が対象（偏差を求めないようにするため最終引数を指定）
     let target = new Cell(data, 0, 0, w, h, 0);
     let cache = target.split(this.minimumSplitWidth) as Cell[];
     // split した場所に色が塗られる
-    cache.forEach((cell) => {
-      drawRect(cx, cell);
-    });
+    // cache.forEach((cell) => {
+    //   drawRect(cx, cell);
+    // });
 
     let running = true;
     window.addEventListener('keydown', (evt) => {

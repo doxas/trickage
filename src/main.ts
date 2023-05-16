@@ -79,5 +79,12 @@ window.addEventListener('DOMContentLoaded', () => {
   }).on('change', (v) => {
     renderer.lineLuminanceScale = v.value;
   });
+  pane.addInput({lineWidth: renderer.lineWidth}, 'lineWidth', {
+    step: 1,
+    min: 0,
+    max: 16,
+  }).on('change', (v) => {
+    renderer.lineWidth = v.value;
+  });
 
 }, false);

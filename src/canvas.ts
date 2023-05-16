@@ -8,15 +8,17 @@ export class Renderer {
   private image: HTMLImageElement;
 
   // セルのサイズが大きいほど影響力が強くなるように補正する係数
-  sizeRatio = 1.0;
+  sizeRatio = 5000.0;
   // 分割できないセルが何度出てきたら処理を完了したとみなすか
   maxLimitCount = 1000;
   // 元のピクセルを何個単位で最小ピクセルとみなして縮小 canvas に焼くか
   originalScale = 1;
   // これ以上分割できないサイズ（1 以上を指定）
-  minimumSplitWidth = 4;
+  minimumSplitWidth = 8;
+  // 最終的な出力に掛ける係数
+  luminanceScale = 1.1;
   // 最終的な出力の線の輝度に掛ける係数
-  lineLuminanceScale = 0.25;
+  lineLuminanceScale = 0.2;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
@@ -117,7 +119,7 @@ export class Renderer {
     cx.lineWidth = 1;
     cx.strokeStyle = 'rgba(0, 0, 0, 1.0)';
     const drawRect = (cx: CanvasRenderingContext2D, cell: Cell): void => {
-      cx.fillStyle = `rgb(${cell.color.r}, ${cell.color.g}, ${cell.color.b})`;
+      cx.fillStyle = `rgb(${cell.color.r * this.luminanceScale}, ${cell.color.g * this.luminanceScale}, ${cell.color.b * this.luminanceScale})`;
       cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
       if (this._mode === Renderer.MODE_CELL_SPLIT_WITH_LINE) {
         cx.strokeStyle = `rgb(${cell.color.r * this.lineLuminanceScale}, ${cell.color.g * this.lineLuminanceScale}, ${cell.color.b * this.lineLuminanceScale})`;
@@ -188,15 +190,14 @@ class Cell {
       average += cells[i].diff;
     }
     average /= cells.length;
-    const diffs = cells.map((cell) => {
-      const d = cell.diff - average;
-      return d * d * (cell.rect.width * cell.rect.height * sizeRatio);
-    });
     let index = 0;
     let value = -Infinity;
     for (let i = 0, j = cells.length; i < j; ++i) {
-      if (diffs[i] > value) {
-        value = diffs[i];
+      const c = cells[i];
+      const d = c.diff - average;
+      const r = (d * d) * (c.rect.width * c.rect.height * sizeRatio);
+      if (r > value) {
+        value = r;
         index = i;
       }
     }

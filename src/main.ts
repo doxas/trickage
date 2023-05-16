@@ -23,15 +23,15 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.mode = v.value;
   });
   pane.addInput({sizeRatio: renderer.sizeRatio}, 'sizeRatio', {
-    step: 0.1,
-    min: 0.1,
-    max: 10.0,
+    step: 1,
+    min: 1,
+    max: 10000.0,
   }).on('change', (v) => {
     renderer.sizeRatio = v.value;
   });
   pane.addInput({maxLimitCount: renderer.maxLimitCount}, 'maxLimitCount', {
     step: 1,
-    min: 10,
+    min: 0,
     max: 10000,
   }).on('change', (v) => {
     renderer.maxLimitCount = v.value;
@@ -44,11 +44,18 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.originalScale = v.value;
   });
   pane.addInput({minimumSplitWidth: renderer.minimumSplitWidth}, 'minimumSplitWidth', {
-    step: 1,
-    min: 1,
+    step: 2,
+    min: 2,
     max: 16,
   }).on('change', (v) => {
     renderer.minimumSplitWidth = v.value;
+  });
+  pane.addInput({luminanceScale: renderer.luminanceScale}, 'luminanceScale', {
+    step: 0.01,
+    min: 0.75,
+    max: 1.75,
+  }).on('change', (v) => {
+    renderer.luminanceScale = v.value;
   });
   pane.addInput({lineLuminanceScale: renderer.lineLuminanceScale}, 'lineLuminanceScale', {
     step: 0.01,

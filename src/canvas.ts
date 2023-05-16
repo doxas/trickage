@@ -12,7 +12,7 @@ export class Renderer {
   // 分割できないセルが何度出てきたら処理を完了したとみなすか
   maxLimitCount = 1000;
   // 元のピクセルを何個単位で最小ピクセルとみなして縮小 canvas に焼くか
-  originalScale = 1;
+  originalScale = 2;
   // これ以上分割できないサイズ（1 以上を指定）
   minimumSplitWidth = 8;
   // 最終的な出力に掛ける係数
@@ -26,7 +26,7 @@ export class Renderer {
   // swap fill and stroke
   swapStroke = false;
   // line width
-  lineWidth = 0;
+  lineWidth = 2;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
@@ -127,6 +127,7 @@ export class Renderer {
 
     cx.lineWidth = Math.max(2, this.lineWidth);
     const sub = this.lineWidth / 2;
+    const subH = sub / 2;
     const drawRect = (cx: CanvasRenderingContext2D, cell: Cell): void => {
       if (this.monochrome === true) {
         const m = cell.diff * this.luminanceScale;
@@ -141,9 +142,8 @@ export class Renderer {
         cx.strokeStyle = fill;
       }
       if (this._mode === Renderer.MODE_CELL_SPLIT_WITH_LINE) {
-        // cx.strokeRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
-        cx.strokeRect(cell.rect.x + sub, cell.rect.y + sub, cell.rect.width - sub, cell.rect.height - sub);
-        cx.fillRect(cell.rect.x + sub, cell.rect.y + sub, cell.rect.width - sub, cell.rect.height - sub);
+        cx.strokeRect(cell.rect.x + subH, cell.rect.y + subH, cell.rect.width - sub, cell.rect.height - sub);
+        cx.fillRect(cell.rect.x + subH, cell.rect.y + subH, cell.rect.width - sub, cell.rect.height - sub);
       } else {
         cx.fillRect(cell.rect.x, cell.rect.y, cell.rect.width, cell.rect.height);
       }

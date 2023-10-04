@@ -26,7 +26,7 @@ export class Renderer {
   // swap fill and stroke
   swapStroke = false;
   // line width
-  lineWidth = 2;
+  lineWidth = 1;
 
   static MODE_CELL_SPLIT = 0;
   static MODE_CELL_SPLIT_WITH_LINE = 1;
